@@ -1,0 +1,2 @@
+E:\Program Files (x86)\sbs-academy\게임\Debug\게임.exe
+E:\Program Files (x86)\sbs-academy\game\게임\Debug\게임.exe

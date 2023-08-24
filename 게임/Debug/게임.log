@@ -1,0 +1,4 @@
+﻿  소스.cpp
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(99,24): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(99,26): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+  게임.vcxproj -> E:\Program Files (x86)\sbs-academy\game\게임\Debug\게임.exe
