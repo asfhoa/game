@@ -12,15 +12,27 @@
 #define YELLOW SetConsoleTextAttribute( col,0x000e );
 #define GOLD SetConsoleTextAttribute( col,0x0006 );	
 #define GRAY SetConsoleTextAttribute( col,0x0008 );
+#define RED SetConsoleTextAttribute( col,0x000c );
 
 #define MAZE_WIDTH 15
-#define MEZE_HEIGHT 14
-#define SQUARE_WIDTH 31
-#define SQUARE_HEIGHT 40
-#define UP 72
-#define LEFT 75
-#define RIGHT 77
-#define DOWN 80
+#define MAZE_HEIGHT 14
+#define BATTLE_UI_WIDTH 31
+#define BATTLE_UI_HEIGHT 40
+#define INFO_UI_WIDTH 21
+#define INFO_UI_HEIGHT 8
+#define SELECT_UI_WIDTH 11
+#define SELECT_UI_HEIGHT 7
+#define DIALOS_DISTANCE 2
+
+
+enum KeyInput
+{
+    UP = 72,
+    LEFT = 75,
+    RIGHT = 77,
+    DOWN = 80,
+    SPACEBAR = 32
+};
 
 enum Object
 {
@@ -43,6 +55,13 @@ enum Square
     LENGTH
 };
 
+enum PlayerAction
+{
+    ATTACK,
+    RUN,
+    CHOICES
+};
+
 struct Player
 {
     int x;
@@ -61,18 +80,26 @@ struct Enemy
 };
 
 //미로 맵 데이터
-char maze[MEZE_HEIGHT][MAZE_WIDTH];
-char battleUI[1][1];
+char maze[MAZE_HEIGHT][MAZE_WIDTH];
+char buf[256];
 bool gameClear = false;
 bool gameOver = false;
 bool bossLive = true;
+bool battle = false;
 
 Player player = { 2,1,100,20,5,"♠" };
-char monster[7][1] = { 0,0 };
-char boss;
 int item[2];
 int secretDoor[2];
 int escape[2];
+
+void gotoxy(int x, int y)
+{
+    //x, y 좌표 설정
+    COORD position = { x,y };
+
+    //커서 이동
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), position);
+}
 
 void CreateMaze()
 {
@@ -100,19 +127,23 @@ void CreateMaze()
     strcpy(maze[13], "11111111111111");
 }
 
-//좌표 이동 함수
-void gotoxy(int x, int y)
+void ErasePoint(int x, int y)
 {
-    //x, y 좌표 설정
-    COORD position = { x,y };
-
-    //커서 이동
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), position);
+    gotoxy(x * 2, y);
+    printf("  ");
+    gotoxy(-1, -1);
 }
 
-void MazeDraw(int x,int y,char c)
+void DrawPoint(const char* c, int x, int y)
 {
-    gotoxy(x,y );
+    gotoxy(x * 2, y);
+    printf("%s", c);
+    gotoxy(-1, -1);
+}
+
+void MazeDraw(int x, int y, char c)
+{
+    gotoxy(x, y);
     switch (c)
     {
     case EMPTY:
@@ -167,16 +198,31 @@ void MazeDraw(int x,int y,char c)
         printf("│");
         break;
     }
-    gotoxy(MAZE_WIDTH, MEZE_HEIGHT);
+    gotoxy(MAZE_WIDTH, MAZE_HEIGHT);
+}
+
+void DrawAll()
+{
+    for (int i = 0; i < MAZE_HEIGHT; ++i)
+    {
+        for (int j1 = 0, j2 = 0; j1 < MAZE_WIDTH; j1++)
+        {
+
+            MazeDraw(j2, i, maze[i][j1]);
+
+            j2 += 2;
+        }
+    }
 }
 
 void MazeBuffer()
 {
-    static char front_buffer[MEZE_HEIGHT][MAZE_WIDTH] = { ' ' };
+    static char front_buffer[MAZE_HEIGHT][MAZE_WIDTH] = { ' ' };
     static Player front_player = player;
 
     //현재 미로와 front_buffer(이전 미로)에 있는 미로 비교
-    for (int i = 0; i < MEZE_HEIGHT; ++i)
+    for (int i = 0; i < MAZE_HEIGHT; ++i)
+    {
         for (int j1 = 0, j2 = 0; j1 < MAZE_WIDTH; j1++)
         {
             if (front_buffer[i][j1] != maze[i][j1])
@@ -188,15 +234,16 @@ void MazeBuffer()
             }
             j2 += 2;
         }
+    }
 
-    if (front_player.x != player.x|| front_player.y != player.y)
+    if (front_player.x != player.x || front_player.y != player.y)
     {
         gotoxy(front_player.x, front_player.y);
         printf("%s", "  ");
         front_player = player;
     }
 
-    gotoxy(0, MEZE_HEIGHT+1);
+    gotoxy(0, MAZE_HEIGHT + 1);
     printf("HP : %d  ", player.hp);
     printf("MP : %d\n", player.mp);
     printf("Damage : %d ", player.damage);
@@ -205,38 +252,31 @@ void MazeBuffer()
     printf("%s", player.shape);
 }
 
-void SquareDraw(int x, int y)
+void SquareDraw(int minX, int minY, int maxX, int maxY)
 {
-    gotoxy(x, y);
+    gotoxy(minX, minY);
 
-    for (int i = y; i < SQUARE_HEIGHT; i++)
+    for (int i = minY; i < maxY; i++)
     {
-        for (int j = x, j2 = x; j < SQUARE_WIDTH - 1; j++)
+        for (int j = minX, j2 = minX; j < maxX - 1; j++)
         {
-            if (i == y && j == x)
+            if (i == minY && j == minX)
                 MazeDraw(j2, i, L_TOP);
-            else if (i == y && j == SQUARE_WIDTH - 2)
+            else if (i == minY && j == maxX - 2)
                 MazeDraw(j2, i, R_TOP);
-            else if (i == SQUARE_HEIGHT - 1 && j == x)
+            else if (i == maxY - 1 && j == minX)
                 MazeDraw(j2, i, L_BOTTOM);
-            else if (i == SQUARE_HEIGHT - 1 && j == SQUARE_WIDTH - 2)
+            else if (i == maxY - 1 && j == maxX - 2)
                 MazeDraw(j2, i, R_BOTTOM);
-            else if ((i != y || i != SQUARE_HEIGHT - 1) &&
-                (j == x || j == SQUARE_WIDTH - 2))
+            else if ((i != minY || i != maxY - 1) &&
+                (j == minX || j == maxX - 2))
                 MazeDraw(j2, i, LENGTH);
-            else if ((i == y || i == SQUARE_HEIGHT - 1) &&
-                (j != x || j != SQUARE_WIDTH - 2))
+            else if ((i == minY || i == maxY - 1) &&
+                (j != minX || j != maxX - 2))
                 MazeDraw(j2, i, WIDTH);
             j2 += 2;
         }
     }
-
-}
-
-
-void BattleUIDraw()
-{
-
 }
 
 void MonsterDraw(char monster)
@@ -251,22 +291,87 @@ void MonsterDraw(char monster)
 
     if (readfile != NULL)
     {
-        gotoxy(0, 8);
+        gotoxy(0, 10);
         fread(buffer, 1, 10000, readfile);
         printf("%s", buffer);
     }
 
     fclose(readfile);
 }
-void Battle(char monster)
+
+int SelectCursor(int dialogs, int distance, int x, int y)
 {
+    int Select = 0;
+    RED
+        DrawPoint("▷", x, y);
+        while (1)
+        {
+            switch (_getch())
+            {
+            case UP:
+                if (Select - 1 >= 1)
+                {
+                    ErasePoint(x, y);
+                    y -= distance;
+                    Select--;
+                }
+                break;
+            case DOWN:
+                if (Select + 1 <= dialogs)
+                {
+                    ErasePoint(x, y);
+                    y += distance;
+                    Select++;
+                }
+                break;
+            case SPACEBAR:
+                ErasePoint(x, y);
+                return Select;
+            }
+            RED
+                DrawPoint("▷", x, y);
+            ORIGINAL
+        }
+    ORIGINAL
+}
+
+void BattleInfoDraw()
+{
+
+}
+
+
+
+bool Battle(char monster)
+{
+    sprintf(buf, "mode con: lines=%d cols=%d", BATTLE_UI_HEIGHT, BATTLE_UI_WIDTH * 2);
+    system(buf);
     system("cls");
     MonsterDraw(monster);
-    SquareDraw(0, 0);
+    SquareDraw(0, 0, BATTLE_UI_WIDTH, BATTLE_UI_HEIGHT); //전체 창
+    SquareDraw(3*2, 1, INFO_UI_WIDTH+10, INFO_UI_HEIGHT); //플레이어와 몬스터 정보 창
+    SquareDraw(10*2, 32, SELECT_UI_WIDTH+20, SELECT_UI_HEIGHT+32); //플레이어 선택지 창
+    DrawPoint("공격!!", 13, 34);
+    DrawPoint("도망쳐!!", 13, 36);
+
+    int select;
+    char c[20] = { "공격한다" };
+    battle = true;
 
     while (true)
     {
-        BattleUIDraw();
+        select = SelectCursor(CHOICES, DIALOS_DISTANCE, 11, 34);
+        BattleInfoDraw();
+
+        switch (select)
+        {
+        case ATTACK:
+            break;
+        case RUN:
+            system("cls");
+            DrawAll();
+            return 0;
+        }
 
         if (player.hp <= 0)
         {
@@ -276,6 +381,12 @@ void Battle(char monster)
 
         Sleep(100);
     }
+
+    battle = false;
+    system("cls");
+    DrawAll();
+
+    return 1;
 }
 
 void GetItem()
@@ -297,9 +408,13 @@ bool MoveCheck(int x,int y,char object)
         return 0;
     case MONSTER:
     case BOSS:
-        Battle(object);
-        maze[player.y + y][player.x / 2 + x] = EMPTY;
-        return 0;
+        if (Battle(object))
+        {
+            maze[player.y + y][player.x / 2 + x] = EMPTY;
+            return 0;
+        }
+        
+        return 1;
     case SECRET_DOOR:
         if (bossLive)
             return 1;
@@ -308,16 +423,14 @@ bool MoveCheck(int x,int y,char object)
         return 0;
     case ESCAPE:
         gameClear = true;
-        return 1;
+        return 0;
     }
     return 0;
 }
 
-//키 입력 함수
 void Keyboard()
 {
     char key = 0;
-    
 
     if (_kbhit())
     {
@@ -353,24 +466,40 @@ void Keyboard()
             player.x += 2;
             break;
         }
+        sprintf(buf, "mode con: lines=%d cols=%d", MAZE_HEIGHT, MAZE_WIDTH * 2);
     }
 }
 
 int main()
 {
+    
+    sprintf(buf, "mode con: lines=%d cols=%d", MAZE_HEIGHT+4, MAZE_WIDTH * 2);
+    system(buf);
     CreateMaze();
-    MonsterDraw(BOSS);
-    SquareDraw(0, 0);
+  
     while (true)
     {
         
         Keyboard();
         MazeBuffer();
-
+        
         if (gameOver == true || gameClear == true)
             break;
 
         Sleep(100);
     }
+
+    if (gameClear)
+    {
+        gotoxy(MAZE_WIDTH / 2 - 3, MAZE_HEIGHT / 2);
+        printf("게임 클리어!!");
+    }
+
+    if(gameOver)
+    {
+        gotoxy(MAZE_WIDTH / 2 - 3, MAZE_HEIGHT / 2);
+        printf("게임 오버 :( ");
+    }
+
 	return 0;
 }
