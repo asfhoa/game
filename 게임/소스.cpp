@@ -5,6 +5,7 @@
 #include<Windows.h>
 #include<string.h>
 #include<string>
+#include<time.h>
 
 #define col GetStdHandle(STD_OUTPUT_HANDLE) 
 #define BLOOD SetConsoleTextAttribute( col,0x0004 );
@@ -22,17 +23,12 @@
 #define BATTLE_UI_WIDTH 31
 #define BATTLE_UI_HEIGHT 40
 #define INFO_UI_WIDTH 21
-#define INFO_UI_HEIGHT 8
+#define INFO_UI_HEIGHT 9
 #define SELECT_UI_WIDTH 11
 #define SELECT_UI_HEIGHT 7
-#define DIALOS_DISTANCE 2
 #define PLAYER_MAX_HP 100
 #define PLAYER_MAX_MP 10
 #define PLAYER_DAMAGE 5
-#define MONSTER_MAX_HP 20
-#define MONSTER_DAMAGE 5
-#define BOSS_MAX_HP 100
-#define BOSS_DAMAGE 13
 #define TITLE 11
 
 enum KeyInput
@@ -68,8 +64,9 @@ enum Square
 enum PlayerAction
 {
     ATTACK,
-    SKILL,
     RUN,
+    SKILL,
+    USE_ITEM,
     CHOICES
 };
 
@@ -77,6 +74,24 @@ enum MainTitle
 {
     START,
     END
+};
+
+enum MonsterInfo
+{
+    ALIEN_MAX_HP = 20, 
+    ALIEN_DAMAGE = 5,
+    DINOSAUR_MAX_HP = 40,
+    DINOSAUR_DAMAGE = 2, 
+    TUX_MAX_HP = 15,
+    TUX_DAMAGE = 8, 
+    BOSS_MAX_HP = 100,
+    BOSS_DAMAGE = 18
+};
+
+enum AttackTurn
+{
+    PLAYER_TURN,
+    MONSTER_TURN
 };
 
 struct Player
@@ -91,7 +106,7 @@ struct Player
     const char* shape;
 };
 
-struct Enemy
+struct Monster
 {
     int maxHP;
     int hp;
@@ -108,10 +123,8 @@ bool bossLive = true;
 bool battle = false;
 
 Player player;
-Enemy enemy;
-int item[2];
-int secretDoor[2];
-int escape[2];
+Monster monster;
+int itemCount;
 
 
 void gotoxy(int x, int y)
@@ -147,6 +160,8 @@ void CreateMaze()
     strcpy(maze[11], "10001011111101");
     strcpy(maze[12], "16005000000301");
     strcpy(maze[13], "11111111111111");
+
+    memset(front_maze, 0, sizeof(front_maze));
 }
 
 void Init()
@@ -155,11 +170,12 @@ void Init()
 PLAYER_MAX_MP,PLAYER_MAX_MP,PLAYER_DAMAGE,"♠" };
 
     CreateMaze();
-    memset(front_maze, 0, sizeof(front_maze));
 
     gameStart = true;
     gameClear = false;
     bossLive = true;
+
+    itemCount = 0;
 }
 
 void ErasePoint(int x, int y)
@@ -269,8 +285,7 @@ void MazeBuffer()
 
     if (front_player.x != player.x || front_player.y != player.y)
     {
-        gotoxy(front_player.x, front_player.y);
-        printf("%s", "  ");
+        ErasePoint(front_player.x/2, front_player.y);
         front_player = player;
     }
 
@@ -279,8 +294,7 @@ void MazeBuffer()
     printf("MP : %d\n", player.mp);
     printf("Damage : %d ", player.damage);
 
-    gotoxy(player.x, player.y);
-    printf("%s", player.shape);
+    DrawPoint(player.shape, player.x/2, player.y);
 }
 
 void SquareDraw(int minX, int minY, int maxX, int maxY)
@@ -310,15 +324,34 @@ void SquareDraw(int minX, int minY, int maxX, int maxY)
     }
 }
 
-void MonsterDraw(char monster,int y)
+void MonsterDraw(char monsterType,int y)
 {
     FILE* readfile = NULL;
-    if (monster == MONSTER)
-        readfile = fopen("alien.TXT", "r");
-    else if (monster == BOSS)
+    if(monsterType ==TITLE)
+        readfile = fopen("title.TXT", "r");
+    else if (monsterType == BOSS)
+    {
         readfile = fopen("dragon.TXT", "r");
-    else if(monster==TITLE)
-        readfile = fopen("title.TXT", "r"); 
+        monster = { BOSS_MAX_HP, BOSS_MAX_HP,BOSS_DAMAGE };
+    }
+    else
+    {
+        switch (rand() % 3)
+        {
+        case 0:
+            readfile = fopen("alien.TXT", "r");
+            monster = { ALIEN_MAX_HP, ALIEN_MAX_HP,ALIEN_DAMAGE };
+            break;
+        case 1:
+            readfile = fopen("dinosaur.TXT", "r");
+            monster = { DINOSAUR_MAX_HP, DINOSAUR_MAX_HP,DINOSAUR_DAMAGE };
+            break;
+        case 2:
+            readfile = fopen("tux.TXT", "r");
+            monster = { TUX_MAX_HP, TUX_MAX_HP,TUX_DAMAGE };
+            break;
+        }
+    }
 
     char buffer[100000] = { 0, };
 
@@ -332,9 +365,10 @@ void MonsterDraw(char monster,int y)
     fclose(readfile);
 }
 
-int SelectCursor(int dialogs, int distance, int x, int y)
+int SelectCursor(int dialogs, int x, int y)
 {
     int Select = 0;
+    
     RED
         DrawPoint("▷", x, y);
     ORIGINAL
@@ -343,19 +377,35 @@ int SelectCursor(int dialogs, int distance, int x, int y)
             switch (_getch())
             {
             case UP:
-                if (Select - 1 >= 0)
+                if (Select - 1 == 0 || Select - 1 == 2)
                 {
                     ErasePoint(x, y);
-                    y -= distance;
+                    y -= 3;
                     Select--;
                 }
                 break;
             case DOWN:
-                if (Select + 1 < dialogs)
+                if (Select + 1 == 1 || Select + 1 == 3)
                 {
                     ErasePoint(x, y);
-                    y += distance;
+                    y += 3;
                     Select++;
+                }
+                break;
+            case LEFT:
+                if (gameStart && (Select - 2 == 0 || Select - 2 == 1))
+                {
+                    ErasePoint(x, y);
+                    x -= 6;
+                    Select -= 2;
+                }
+                break;
+            case RIGHT:
+                if (gameStart && (Select + 2 == 2 || Select + 2 == 3))
+                {
+                    ErasePoint(x, y);
+                    x += 6;
+                    Select += 2;
                 }
                 break;
             case SPACEBAR:
@@ -368,89 +418,105 @@ int SelectCursor(int dialogs, int distance, int x, int y)
         }
 }
 
-void Attack()
+void Attack(int playerTurn)
 {
-    enemy.hp -= player.damage;
-
-    if (enemy.hp > 0)
-        player.hp -= enemy.damage;
+    if (playerTurn == PLAYER_TURN)
+        monster.hp -= player.damage;
+    else
+        player.hp -= monster.damage;
 }
 
 void Skill()
 {
-    enemy.hp -= player.damage * 2;
+    monster.hp -= player.damage * 2;
     player.mp -= 5;
+}
+
+void UseItem()
+{
+    if (player.hp + 20 < player.maxHP)
+        player.hp += 20;
+    else
+        player.hp = player.maxHP;
+
+    if (player.mp + 5 < player.maxMP)
+        player.mp += 5;
+    else
+        player.mp = player.maxMP;
+
+    itemCount--;
 }
 
 void BattleInfoDraw()
 {
     DrawPoint("플레이어 정보", 5, 2);
-    gotoxy(5 * 2, 4);
-    printf("              ", player.maxHP, player.hp);
-    gotoxy(5 * 2, 4);
+    gotoxy(5 * 2, 3);
+    printf("남은 아이템 : %d", itemCount);
+    DrawPoint("              ", 5, 5);
+    gotoxy(5 * 2, 5);
     printf("HP : %d/%d", player.maxHP, player.hp);
-    gotoxy(5 * 2, 5);
-    printf("              ", player.maxMP, player.mp);
-    gotoxy(5 * 2, 5);
+    DrawPoint("              ", 5, 6);
+    gotoxy(5 * 2, 6);
     printf("MP : %d/%d", player.maxMP, player.mp);
-    gotoxy(5 * 2, 6);
-    printf("              ", player.damage);
-    gotoxy(5 * 2, 6);
+    DrawPoint("              ", 5, 7);
+    gotoxy(5 * 2, 7);
     printf("Damage : %d", player.damage);
 
     DrawPoint("몬스터 정보", 19, 2);
-    gotoxy(19 * 2, 4);
-    printf("              ", enemy.maxHP, enemy.hp);
-    gotoxy(19 * 2, 4);
-    printf("HP : %d/%d", enemy.maxHP, enemy.hp);
+    DrawPoint("              ", 19, 5);
     gotoxy(19 * 2, 5);
-    printf("              ", enemy.damage);
-    gotoxy(19 * 2, 5);
-    printf("Damage : %d", enemy.damage);
+    printf("HP : %d/%d", monster.maxHP, monster.hp);
+    DrawPoint("              ", 19, 7);
+    gotoxy(19 * 2, 7);
+    printf("Damage : %d", monster.damage);
 }
 
-bool Battle(char monster)
+bool Battle(char monsterType)
 {
     sprintf(buf, "mode con: lines=%d cols=%d", BATTLE_UI_HEIGHT, BATTLE_UI_WIDTH * 2);
     system(buf);
     system("cls");
-    MonsterDraw(monster,10);
+    MonsterDraw(monsterType,10);
     SquareDraw(0, 0, BATTLE_UI_WIDTH, BATTLE_UI_HEIGHT); //전체 창
     SquareDraw(3*2, 1, INFO_UI_WIDTH+10, INFO_UI_HEIGHT); //플레이어와 몬스터 정보 창
-    SquareDraw(10*2, 32, SELECT_UI_WIDTH+20, SELECT_UI_HEIGHT+32); //플레이어 선택지 창
-    DrawPoint("공격!!", 13, 33);
-    DrawPoint("스킬 발동!!", 13, 35);
-    DrawPoint("도망쳐!!", 13, 37);
+    SquareDraw(7*2, 31, SELECT_UI_WIDTH+20, SELECT_UI_HEIGHT+32); //플레이어 선택지 창
+    DrawPoint("공격!!", 10, 33);
+    DrawPoint("스킬 발동!!", 16, 33);
+    DrawPoint("도망쳐!!", 10, 36);
+    DrawPoint("아이템사용!!", 16, 36);
 
     battle = true;
-
-    if (monster == MONSTER)
-        enemy = { MONSTER_MAX_HP, MONSTER_MAX_HP,MONSTER_DAMAGE };
-    else
-        enemy = { BOSS_MAX_HP, BOSS_MAX_HP,BOSS_DAMAGE };
 
     while (true)
     {
         BattleInfoDraw();
 
-        switch (SelectCursor(CHOICES, DIALOS_DISTANCE, 11, 33))
+        switch (SelectCursor(CHOICES, 8, 33))
         {
         case ATTACK:
-            Attack();
-            break;
-        case SKILL:
-            if (player.mp > 0)
-                Skill();
+            Attack(PLAYER_TURN);
+            Attack(MONSTER_TURN);
             break;
         case RUN:
             system("cls");
             DrawAll();
             return 0;
+        case SKILL:
+            if (player.mp > 0)
+            {
+                Skill();
+                Attack(MONSTER_TURN);
+            }
+            break;
+        case USE_ITEM:
+            if (itemCount > 0)
+                UseItem();
+            break;
         }
 
-        if (enemy.hp <= 0)
+        if (monster.hp <= 0)
         {
-            if (monster == BOSS)
+            if (monsterType == BOSS)
                 bossLive = false;
             break;
         }
@@ -473,16 +539,7 @@ bool Battle(char monster)
 
 void GetItem()
 {
-    if (player.hp + 20 < player.maxHP)
-        player.hp += 20;
-    else
-        player.hp = player.maxHP;
-
-    if (player.mp + 5 < player.maxMP)
-        player.mp += 5;
-    else
-        player.mp = player.maxMP;
-
+    itemCount++;
     player.damage += 1;
 }
 
@@ -562,7 +619,7 @@ void Keyboard()
 
 int main()
 {
-    
+    srand(time(NULL));
     sprintf(buf, "mode con: lines=%d cols=%d", TITLE_HEIGHT, TITLE_WIDTH * 2);
     system(buf);
 
@@ -572,7 +629,7 @@ int main()
         DrawPoint("던전 RPG", TITLE_WIDTH-20 + 10, 4);
         DrawPoint("게임 시작", TITLE_WIDTH/2+10, TITLE_HEIGHT/2+8);
         DrawPoint("게임 종료", TITLE_WIDTH/2+10, TITLE_HEIGHT/2+11);
-        switch (SelectCursor(END+1,3,
+        switch (SelectCursor(END+1,
             TITLE_WIDTH / 2 + 8, TITLE_HEIGHT / 2 + 8))
         {
         case START:

@@ -1,14 +1,5 @@
 ﻿  소스.cpp
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(120,24): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(120,26): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(389,36): warning C4474: 'printf' : 서식 문자열에 전달된 인수가 너무 많습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(389,36): message : 자리 표시자 및 해당 매개 변수에는 variadic 인수가 0개 필요하지만 2개가 제공되었습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(393,36): warning C4474: 'printf' : 서식 문자열에 전달된 인수가 너무 많습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(393,36): message : 자리 표시자 및 해당 매개 변수에는 variadic 인수가 0개 필요하지만 2개가 제공되었습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(397,36): warning C4474: 'printf' : 서식 문자열에 전달된 인수가 너무 많습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(397,36): message : 자리 표시자 및 해당 매개 변수에는 variadic 인수가 0개 필요하지만 1개가 제공되었습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(403,35): warning C4474: 'printf' : 서식 문자열에 전달된 인수가 너무 많습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(403,35): message : 자리 표시자 및 해당 매개 변수에는 variadic 인수가 0개 필요하지만 2개가 제공되었습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(407,35): warning C4474: 'printf' : 서식 문자열에 전달된 인수가 너무 많습니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(407,35): message : 자리 표시자 및 해당 매개 변수에는 variadic 인수가 0개 필요하지만 1개가 제공되었습니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(133,24): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(133,26): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(622,15): warning C4244: '인수': 'time_t'에서 'unsigned int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   게임.vcxproj -> E:\Program Files (x86)\sbs-academy\game\게임\Debug\게임.exe
