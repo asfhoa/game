@@ -1,5 +1,5 @@
 ﻿  소스.cpp
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(133,24): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(133,26): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
-E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(622,15): warning C4244: '인수': 'time_t'에서 'unsigned int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(148,24): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(148,26): warning C4838: 'int'에서 'SHORT'(으)로의 변환에는 축소 변환이 필요합니다.
+E:\Program Files (x86)\sbs-academy\game\게임\소스.cpp(704,15): warning C4244: '인수': 'time_t'에서 'unsigned int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
   게임.vcxproj -> E:\Program Files (x86)\sbs-academy\game\게임\Debug\게임.exe
